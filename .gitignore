@@ -1,0 +1,36 @@
+# Create a .gitignore file for the ia_nservico project
+with open("ia_nservico/.gitignore", "w") as f:
+    f.write("""# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+
+# CSV files generated automatically
+cfg/clientes.csv
+data/notas.csv
+
+# XML results
+results/*.xml
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE folders
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# Docker artifacts
+*.pid
+*.sock
+
+# Others
+*.zip
+""")
+
+print(".gitignore criado com sucesso na pasta 'ia_nservico'.")

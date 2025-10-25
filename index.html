@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>iArbeit — Notas de Serviço</title>
+  <style>
+    :root { --bg:#0b1220; --card:#0f172a; --ink:#e6edf3; --muted:#9fb0cf; --line:#1f2a44; --btn:#1f6feb; --btn2:#223052; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:14px; }
+    .logo { height:34px; background:#0b1020; border:1px solid #223052; border-radius:8px; padding:4px; }
+    h1 { margin:0; font-size:18px; font-weight:600; }
+    main { padding:20px; max-width:1100px; margin:0 auto; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .col { flex:1 1 320px; min-width:280px; }
+    label { font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    input[type=text], input[type=number], input[type=date], input[type=time], select, textarea { width:100%; background:#0b1020; border:1px solid #223052; color:var(--ink); border-radius:8px; padding:10px 12px; }
+    textarea { resize: vertical; }
+    input[type=checkbox] { transform: scale(1.15); margin-right: 6px; }
+    .btns { display:flex; gap:10px; flex-wrap:wrap; }
+    button { background:var(--btn); color:#fff; border:none; border-radius:8px; padding:10px 14px; cursor:pointer; }
+    button.secondary { background:var(--btn2); }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #223052; }
+    thead { background:#0b1020; }
+    .pill { display:inline-block; font-size:12px; color:#c8d9ff; background:#0b1020; border:1px solid #223052; border-radius:999px; padding:6px 10px; }
+    .grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; }
+    @media (max-width: 900px){ .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 560px){ .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="iarbeit.png" alt="iArbeit" class="logo" onerror="this.style.display='none'">
+    <h1>iArbeit — Notas de Serviço</h1>
+    <div style="flex:1"></div>
+    <span class="pill" id="statusClientes">Clientes: 0</span>
+    <span class="pill" id="statusRegistos">Registos: 0</span>
+  </header>
+
+  <main>
+    <!-- 1) CLIENTES -->
+    <section class="card">
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <h2 style="margin:0;font-size:16px;font-weight:600">1) Lista de clientes (CSV)</h2>
+        <div class="btns">
+          <button class="secondary" id="btnExportarClientes">Exportar clientes.csv</button>
+          <button class="secondary" id="btnGuardarClientes">Guardar clientes</button>
+          <button class="secondary" id="btnLimparClientes">Limpar clientes</button>
+        </div>
+      </div>
+      <p class="small" style="color:var(--muted);margin:6px 0 12px">Formato: <code>Cliente,NIF,Entidade</code>. O botão "Guardar clientes" envia para o servidor.</p>
+      <div class="row" style="align-items:center; gap:12px;">
+        <input type="file" id="inputClientesCSV" accept=".csv" style="max-width:360px" />
+        <button id="btnImportarClientes">Importar CSV</button>
+        <button class="secondary" id="btnAdicionarCliente">Adicionar cliente</button>
+        <input type="text" id="filtroClientes" placeholder="Filtrar por nome ou NIF" style="max-width:360px; margin-left:auto;">
+      </div>
+      <div class="card" style="margin-top:12px; padding:0; overflow:auto;">
+        <table>
+          <thead><tr><th>Cliente</th><th>NIF</th><th>Entidade</th><th style="width:120px">Ações</th></tr></thead>
+          <tbody id="tbodyClientes"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2) REGISTO -->
+    <section class="card">
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <h2 style="margin:0;font-size:16px;font-weight:600">2) Registar serviço</h2>
+        <div class="btns">
+          <button class="secondary" id="btnImportarRegistos">Importar notas.csv</button>
+          <button class="secondary" id="btnExportarRegistos">Exportar notas.csv</button>
+          <button class="secondary" id="btnLimparRegistos">Limpar registos</button>
+        </div>
+      </div>
+
+      <form id="formRegisto" class="space-y-4">
+        <div class="grid">
+          <div>
+            <label>Data</label>
+            <input type="date" id="data" required />
+          </div>
+          <div>
+            <label>Hora de Início</label>
+            <input type="time" id="horaInicio" required />
+          </div>
+          <div>
+            <label>Hora Final</label>
+            <input type="time" id="horaFim" required />
+            <div style="margin-top:8px">
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="consideraNoite" /> Hora final no dia seguinte (atravessa a meia-noite)
+              </label>
+            </div>
+          </div>
+          <div>
+            <label>Cliente</label>
+            <select id="cliente" required></select>
+          </div>
+          <div>
+            <label>NIF do Cliente</label>
+            <input type="text" id="nif" required />
+          </div>
+          <div>
+            <label>Entidade</label>
+            <input type="text" id="entidade" />
+          </div>
+          <div>
+            <label>Preço/hora (€)</label>
+            <input type="number" id="precoHora" step="0.01" value="15.00" />
+          </div>
+          <div>
+            <label>Tempo (horas)</label>
+            <input type="text" id="tempoHoras" readonly />
+          </div>
+          <div>
+            <label>Tempo em minutos</label>
+            <input type="number" id="tempoMin" readonly />
+          </div>
+        </div>
+        <div class="row"><div class="col">
+          <label>Descrição</label>
+          <textarea id="descricao" rows="3" placeholder="Resumo do trabalho efetuado..."></textarea>
+        </div></div>
+        <div class="row" style="justify-content:flex-end"><button type="submit">Adicionar registo</button></div>
+      </form>
+    </section>
+
+    <!-- 3) LISTA REGISTOS -->
+    <section class="card">
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <h2 style="margin:0;font-size:16px;font-weight:600">3) Registos</h2>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px">
+          <input type="checkbox" id="mostrarExportados" checked /> Mostrar exportados
+        </label>
+      </div>
+      <div class="card" style="margin-top:12px; padding:0; overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th><th>Início</th><th>Fim</th><th>Tempo</th><th>Min</th>
+              <th>Cliente</th><th>NIF</th><th>Entidade</th><th>Preço/h</th><th>Descrição</th><th>Exportado</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRegistos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4) XML -->
+    <section class="card">
+      <h2 style="margin:0 0 10px;font-size:16px;font-weight:600">4) Gerar XML para ERP</h2>
+      <div class="row" style="align-items:flex-start">
+        <div class="col" style="min-width:480px; flex:2">
+          <p class="small">Um <code>&lt;document&gt;</code> por <strong>Cliente</strong> e por <strong>Dia</strong>. Cada registo gera um <code>&lt;rec&gt;</code> com <em>Qtd.Real</em> (minutos), <em>Qtd.Med1/2</em> (horas HHMM, sem <code>:</code>), <em>Val.UnBru</em> (preço/hora) e <em>Div.Obs</em> (descrição).</p>
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin:6px 0 12px">
+            <input type="checkbox" id="limparAposExportar" /> Limpar registos após gerar XML (senão, marca como exportados)
+          </label>
+          <div class="btns">
+            <button id="btnGerarXML">Gerar XML</button>
+            <button class="secondary" id="btnVerXML">Pré-visualizar XML</button>
+          </div>
+        </div>
+        <div class="col" style="flex:1">
+          <label>Pré-visualização</label>
+          <textarea id="previewXML" rows="10" readonly placeholder="Pré-visualização do XML"></textarea>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = (window.location.origin || '') + '/nservico/api';
+
+    function todayISO(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+    function minutesFromTime(hhmm){ if(!hhmm) return 0; const [h,m]=hhmm.split(':').map(Number); return h*60+(m||0); }
+    function calcTempo(i,f,noite=false){ let ini=minutesFromTime(i), fim=minutesFromTime(f); if(noite||fim<ini) fim+=24*60; const min=Math.max(0,fim-ini); return { minutos:min, horas:Number((min/60).toFixed(2)) }; }
+
+    let clientes=[], registos=[];
+
+    async function apiJSON(endpoint, opts={}){ const res=await fetch(`${API_BASE}${endpoint}`,opts); if(!res.ok) throw new Error(`API ${endpoint} => ${res.status}`); return await res.json(); }
+    async function carregarClientes(){ const d=await apiJSON('/clientes'); return d.rows||[]; }
+    async function enviarClientesCSV(file){ const form=new FormData(); form.append('file',file); return apiJSON('/clientes/upload',{method:'POST',body:form}); }
+    async function guardarClientesServidor(rows){ const header=['Cliente','NIF','Entidade']; const csv=[header.join(',')].concat(rows.map(r=>[r.Cliente||'',r.NIF||'',r.Entidade||''].join(','))).join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const file=new File([blob],'clientes.csv',{type:'text/csv'}); return enviarClientesCSV(file); }
+    async function limparClientesServidor(){ return apiJSON('/clientes/clear',{method:'POST'}); }
+
+    async function carregarRegistos(){ const d=await apiJSON('/notas'); return d.rows||[]; }
+    async function appendNotaServidor(rec){ const form=new FormData(); for(const [k,v] of Object.entries(rec)) form.append(k,v); return apiJSON('/notas',{method:'POST',body:form}); }
+    async function previewXMLServidor(){ const d=await apiJSON('/xml/preview'); return d.xml||''; }
+    async function exportXMLServidor(limpar){ const form=new FormData(); form.append('limpar',limpar? 'true':''); const d=await apiJSON('/xml/export',{method:'POST',body:form}); return d.file; }
+
+    const tbodyClientes=document.getElementById('tbodyClientes');
+    const tbodyRegistos=document.getElementById('tbodyRegistos');
+    const selectCliente=document.getElementById('cliente');
+    function syncStatus(){ document.getElementById('statusClientes').textContent=`Clientes: ${clientes.length}`; document.getElementById('statusRegistos').textContent=`Registos: ${registos.length}`; }
+
+    function renderClientes(){
+      const filtro=document.getElementById('filtroClientes').value.toLowerCase();
+      tbodyClientes.innerHTML=''; selectCliente.innerHTML='<option value="">— Selecione —</option>';
+      clientes.filter(c=>!filtro||c.Cliente?.toLowerCase().includes(filtro)||c.NIF?.toLowerCase().includes(filtro)).forEach((c,idx)=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+          <td><input value="${c.Cliente||''}" data-field="Cliente" data-idx="${idx}"></td>
+          <td><input value="${c.NIF||''}" data-field="NIF" data-idx="${idx}"></td>
+          <td><input value="${c.Entidade||''}" data-field="Entidade" data-idx="${idx}"></td>
+          <td><button class="secondary" data-action="del" data-idx="${idx}">Remover</button></td>`;
+        tbodyClientes.appendChild(tr);
+        const opt=document.createElement('option'); opt.value=c.Cliente||''; opt.textContent=c.Cliente||''; opt.dataset.nif=c.NIF||''; opt.dataset.entidade=c.Entidade||''; selectCliente.appendChild(opt);
+      });
+      syncStatus();
+    }
+
+    function renderRegistos(){
+      const mostrarExportados=document.getElementById('mostrarExportados').checked;
+      tbodyRegistos.innerHTML='';
+      registos.filter(r=>mostrarExportados||(r.Exportado!=="sim"&&r.Exportado!==true)).forEach((r,idx)=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+          <td>${r.Data}</td>
+          <td>${r.HoraInicio}</td>
+          <td>${r.HoraFim}</td>
+          <td>${r.Tempo}</td>
+          <td>${r.TempoMinutos}</td>
+          <td>${r.Cliente}</td>
+          <td>${r.NIF}</td>
+          <td>${r.Entidade||''}</td>
+          <td>${r.PrecoHora||'15.00'}</td>
+          <td>${r.Descricao||''}</td>
+          <td>${(r.Exportado==='sim'||r.Exportado===true)?'sim':'não'}</td>
+          <td><div class="btns"><button class="secondary" data-action="del" data-idx="${idx}">Eliminar</button></div></td>`;
+        tbodyRegistos.appendChild(tr);
+      });
+      syncStatus();
+    }
+
+    // Clientes
+    document.getElementById('btnImportarClientes').addEventListener('click', async ()=>{ const f=document.getElementById('inputClientesCSV').files[0]; if(!f){ alert('Selecione um CSV.'); return; } await enviarClientesCSV(f); clientes=await carregarClientes(); renderClientes(); });
+    document.getElementById('btnAdicionarCliente').addEventListener('click', ()=>{ clientes.push({Cliente:'Novo Cliente',NIF:'',Entidade:''}); renderClientes(); });
+    document.getElementById('btnGuardarClientes').addEventListener('click', async ()=>{ const rows=[]; document.querySelectorAll('#tbodyClientes tr').forEach(tr=>{ const obj={}; tr.querySelectorAll('input').forEach(inp=>{ obj[inp.dataset.field]=inp.value.trim(); }); rows.push(obj); }); await guardarClientesServidor(rows); clientes=await carregarClientes(); renderClientes(); alert('Clientes guardados no servidor.'); });
+    document.getElementById('btnLimparClientes').addEventListener('click', async ()=>{ if(!confirm('Limpar todos os clientes?')) return; await limparClientesServidor(); clientes=[]; renderClientes(); });
+    document.getElementById('btnExportarClientes').addEventListener('click', ()=>{ const header=['Cliente','NIF','Entidade']; const csv=[header.join(',')].concat(clientes.map(c=>[c.Cliente||'',c.NIF||'',c.Entidade||''].join(','))).join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='clientes.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); });
+    document.getElementById('filtroClientes').addEventListener('input', renderClientes);
+
+    document.getElementById('cliente').addEventListener('change', ()=>{ const opt=selectCliente.options[selectCliente.selectedIndex]; document.getElementById('nif').value=opt?.dataset?.nif||''; document.getElementById('entidade').value=opt?.dataset?.entidade||''; });
+
+    // Registo
+    document.getElementById('data').value = todayISO();
+    document.getElementById('formRegisto').addEventListener('input', (e)=>{
+      if(['horaInicio','horaFim','consideraNoite'].includes(e.target.id)){
+        const {minutos,horas}=calcTempo(
+          document.getElementById('horaInicio').value,
+          document.getElementById('horaFim').value,
+          document.getElementById('consideraNoite').checked
+        );
+        document.getElementById('tempoHoras').value=horas.toFixed(2);
+        document.getElementById('tempoMin').value=String(minutos);
+      }
+    });
+
+    document.getElementById('formRegisto').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const Data=document.getElementById('data').value||todayISO();
+      const HoraInicio=document.getElementById('horaInicio').value; // HH:MM
+      const HoraFim=document.getElementById('horaFim').value;       // HH:MM
+      const Cliente=document.getElementById('cliente').value;
+      const NIF=(document.getElementById('nif').value||'').trim();
+      const Entidade=document.getElementById('entidade').value||'';
+      const PrecoHora=parseFloat(document.getElementById('precoHora').value||'15.00')||15.00;
+      const Descricao=document.getElementById('descricao').value||'';
+      if(!Cliente||!NIF||!HoraInicio||!HoraFim){ alert('Preencha Cliente, NIF, Hora de Início e Hora Final.'); return; }
+      const {minutos,horas}=calcTempo(HoraInicio,HoraFim,document.getElementById('consideraNoite').checked);
+      const reg={ Data, HoraInicio, HoraFim, Tempo:horas, TempoMinutos:minutos, Cliente, NIF, Entidade, Descricao, PrecoHora:PrecoHora.toFixed(2) };
+      await appendNotaServidor(reg); registos=await carregarRegistos(); renderRegistos(); e.target.reset();
+      document.getElementById('precoHora').value='15.00'; document.getElementById('data').value=todayISO();
+    });
+
+    document.getElementById('btnImportarRegistos').addEventListener('click', ()=>{ alert('Importar notas.csv (lado servidor) não está disponível nesta versão.'); });
+    document.getElementById('btnExportarRegistos').addEventListener('click', ()=>{
+      const header=["Data","Hora de Início","Hora Final","Tempo","Tempo em Minutos","Cliente","NIF do Cliente","Entidade","Preço/hora","Descrição","Exportado"];
+      const csv=[header.join(',')].concat(registos.map(r=>[r.Data,r.HoraInicio,r.HoraFim,r.Tempo,r.TempoMinutos,r.Cliente,r.NIF,r.Entidade||'',r.PrecoHora||'15.00',r.Descricao||'',(r.Exportado==='sim'||r.Exportado===true)?'sim':'não'].join(','))).join('\n');
+      const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='notas.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    });
+    document.getElementById('btnLimparRegistos').addEventListener('click', ()=>{ alert('Para limpar no servidor, usa a opção "Limpar registos após gerar XML".'); });
+    document.getElementById('mostrarExportados').addEventListener('change', renderRegistos);
+
+    document.getElementById('btnVerXML').addEventListener('click', async ()=>{ document.getElementById('previewXML').value=await previewXMLServidor()||'(Sem registos por exportar)'; });
+    document.getElementById('btnGerarXML').addEventListener('click', async ()=>{ const limpar=document.getElementById('limparAposExportar').checked; const file=await exportXMLServidor(limpar); if(file){ window.open(file,'_blank'); document.getElementById('previewXML').value='Exportado: '+file; registos=await carregarRegistos(); renderRegistos(); } });
+    (async ()=>{ try{ clientes=await carregarClientes(); renderClientes(); registos=await carregarRegistos(); renderRegistos(); } catch(e){ console.error(e); alert('Não foi possível comunicar com a API.'); } })();
+  </script>
+</body>
+</html>
