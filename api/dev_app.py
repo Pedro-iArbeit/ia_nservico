@@ -8,7 +8,7 @@ ROOT = os.path.abspath(os.path.join(BASE_DIR, '..'))
 INDEX = os.path.join(ROOT, 'index.html')
 RESULTS = os.path.join(ROOT, 'results')
 
-from app import app as api_app
+from api.app import app as api_app
 
 dev_app = FastAPI(title='nservico DEV')
 
