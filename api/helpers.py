@@ -45,3 +45,4 @@ def slug(s: str) -> str:
 
 def ymd(date_iso: str) -> str:
     return (date_iso or '').replace('-', '')
+    
