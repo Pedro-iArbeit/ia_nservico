@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from typing import Optional
 import os, zipfile, html
 from datetime import datetime
-from helpers import read_csv_assoc, write_csv_assoc, append_csv_assoc, slug, ymd, CLIENTES_CSV, NOTAS_CSV, RESULTS
+from api.helpers import read_csv_assoc, write_csv_assoc, append_csv_assoc, slug, ymd, CLIENTES_CSV, NOTAS_CSV, RESULTS
 
 BASE_PREFIX = "/nservico"
 
