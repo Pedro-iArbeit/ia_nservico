@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -8,9 +8,14 @@ ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 INDEX = os.path.join(ROOT, "index.html")
 RESULTS = os.path.join(ROOT, "results")
 
-from .app import app as api_app   # ✅ import relativo (robusto em Render e local)
+from .app import app as api_app   # import relativo (robusto)
 
 dev_app = FastAPI(title="nservico DEV")
+
+@dev_app.get("/")
+async def root_redirect():
+    # redireciona raiz -> UI
+    return RedirectResponse(url="/nservico/", status_code=302)
 
 @dev_app.get("/nservico/")
 async def ui_root():
@@ -21,6 +26,4 @@ async def ui_index():
     return FileResponse(INDEX)
 
 dev_app.mount("/nservico/results", StaticFiles(directory=RESULTS), name="results")
-
-# monta a API (todos os endpoints /nservico/api e /nservico/results/mount)
 dev_app.mount("/", api_app)
