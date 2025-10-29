@@ -13,7 +13,7 @@ DEFAULTS = {
         "port": 2800,
         "user": "",
         "password": "",
-        "service": "Queries/Query"  # ajusta para o endpoint real do teu ERP
+        "service": "Queries/Query"
     }
 }
 
@@ -26,7 +26,6 @@ def load_settings():
             data = json.load(f)
         except Exception:
             data = {}
-    # merge defaults
     out = DEFAULTS.copy()
     out["erp"] = DEFAULTS["erp"].copy()
     out.update(data or {})
