@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>iArbeit — Configuração ERP</title>
+  <style>
+    :root { --bg:#0b1220; --card:#0f172a; --ink:#e6edf3; --muted:#9fb0cf; --line:#1f2a44; --btn:#1f6feb; --btn2:#223052; }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center}
+    .logo{height:34px;border:1px solid #223052;background:#0b1020;border-radius:8px;padding:4px}
+    main{max-width:720px;margin:0 auto;padding:20px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select{width:100%;background:#0b1020;border:1px solid #223052;color:var(--ink);border-radius:8px;padding:10px 12px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1 1 280px;min-width:260px}
+    button{background:var(--btn);color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button.secondary{background:var(--btn2)}
+    a{color:#9fb0cf}
+  </style>
+</head>
+<body>
+<header>
+  <img src="iarbeit.png" alt="iArbeit" class="logo" onerror="this.style.display='none'">
+  <h1 style="margin:0;font-size:18px">Configuração ERP</h1>
+  <div style="flex:1"></div>
+  <a href="/nservico/" style="text-decoration:none">← Voltar</a>
+</header>
+
+<main>
+  <!-- Login -->
+  <section class="card" id="cardLogin">
+    <h2 style="margin:0 0 10px;font-size:16px">Acesso</h2>
+    <p style="color:var(--muted)">Introduza a <strong>password de administração</strong> para ver/editar as definições.</p>
+    <div class="row">
+      <div class="col"><label>Password</label><input type="password" id="adminPass" placeholder="••••••••"/></div>
+      <div class="col" style="align-self:flex-end"><button id="btnLogin">Entrar</button></div>
+    </div>
+    <p style="color:var(--muted);margin-top:8px">Default inicial: <code>changeme</code>. Recomenda-se alterar imediatamente.</p>
+  </section>
+
+  <!-- Form -->
+  <section class="card" id="cardForm" style="display:none">
+    <h2 style="margin:0 0 10px;font-size:16px">Definições ERP</h2>
+    <div class="row">
+      <div class="col"><label>Host</label><input id="erpHost" placeholder="ex: erp.exemplo.local"/></div>
+      <div class="col"><label>Porta</label><input id="erpPort" type="number" value="2800"/></div>
+      <div class="col"><label>Utilizador</label><input id="erpUser" /></div>
+      <div class="col"><label>Password</label><input id="erpPassword" type="password" placeholder="(deixar vazio para não alterar)"/></div>
+      <div class="col" style="flex:1 1 100%"><label>Serviço (endpoint)</label><input id="erpService" placeholder="Queries/Query"/></div>
+    </div>
+
+    <h3 style="margin:18px 0 8px;font-size:14px">Password de Administração</h3>
+    <div class="row">
+      <div class="col"><label>Nova admin password</label><input id="newAdminPassword" type="password" placeholder="(opcional)"/></div>
+    </div>
+
+    <div class="row" style="justify-content:flex-end;margin-top:12px;gap:10px">
+      <button class="secondary" id="btnLogout">Sair</button>
+      <button id="btnGuardar">Guardar</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  const API = (window.location.origin || '') + '/nservico/api';
+  function setAuth(p){ localStorage.setItem('ns_admin', p); }
+  function getAuth(){ return localStorage.getItem('ns_admin')||''; }
+  function clearAuth(){ localStorage.removeItem('ns_admin'); }
+
+  async function getSettings(){
+    const p = getAuth();
+    const url = new URL(API + '/settings');
+    url.searchParams.set('admin_password', p);
+    const res = await fetch(url, { method: 'GET' });
+    if(!res.ok) throw new Error('GET settings falhou: '+res.status);
+    return await res.json();
+  }
+  async function saveSettings(payload){
+    const p = getAuth();
+    const fd = new FormData();
+    fd.append('admin_password', p);
+    fd.append('erp_host', payload.host || '');
+    fd.append('erp_port', String(payload.port || 2800));
+    fd.append('erp_user', payload.user || '');
+    if (payload.password !== undefined) fd.append('erp_password', payload.password || '');
+    fd.append('erp_service', payload.service || 'Queries/Query');
+    fd.append('new_admin_password', payload.new_admin_password || '');
+    const res = await fetch(API + '/settings', { method:'POST', body: fd });
+    if(!res.ok) throw new Error('POST settings falhou: '+res.status);
+    return await res.json();
+  }
+
+  const cardLogin = document.getElementById('cardLogin');
+  const cardForm = document.getElementById('cardForm');
+
+  document.getElementById('btnLogin').addEventListener('click', async ()=>{
+    const p = document.getElementById('adminPass').value;
+    if(!p){ alert('Indique a password.'); return; }
+    setAuth(p);
+    try{
+      const s = await getSettings();
+      document.getElementById('erpHost').value = s.erp.host || '';
+      document.getElementById('erpPort').value = s.erp.port || 2800;
+      document.getElementById('erpUser').value = s.erp.user || '';
+      document.getElementById('erpPassword').value = '';
+      document.getElementById('erpService').value = s.erp.service || 'Queries/Query';
+      cardLogin.style.display='none'; cardForm.style.display='block';
+    }catch(e){
+      clearAuth();
+      alert('Acesso negado. Verifique a password.');
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', ()=>{
+    clearAuth();
+    cardForm.style.display='none';
+    cardLogin.style.display='block';
+    document.getElementById('adminPass').value='';
+  });
+
+  document.getElementById('btnGuardar').addEventListener('click', async ()=>{
+    try{
+      const payload = {
+        host: document.getElementById('erpHost').value.trim(),
+        port: parseInt(document.getElementById('erpPort').value || '2800', 10),
+        user: document.getElementById('erpUser').value.trim(),
+        password: document.getElementById('erpPassword').value,
+        service: document.getElementById('erpService').value.trim(),
+        new_admin_password: document.getElementById('newAdminPassword').value
+      };
+      await saveSettings(payload);
+      if(payload.new_admin_password){
+        setAuth(payload.new_admin_password);
+        document.getElementById('newAdminPassword').value='';
+      }
+      document.getElementById('erpPassword').value='';
+      alert('Definições guardadas.');
+    }catch(e){
+      alert('Falha a guardar: ' + e.message);
+    }
+  });
+</script>
+</body>
+</html>
